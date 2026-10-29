@@ -1,0 +1,35 @@
+# Copy to .github/workflows/duty-swap.yml in the repo that holds this project.
+# Requires app-only auth (AZURE_CLIENT_SECRET) because there is no one to complete a device sign-in.
+name: Daily duty swaps
+
+on:
+  schedule:
+    # 14:00 UTC = 7:00 AM Pacific during daylight time (6:00 AM in winter). GitHub cron is always UTC.
+    - cron: "0 14 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: duty_swap_automation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - run: kickoff
+        env:
+          DUTY_SWAP_BACKEND: graph
+          DRY_RUN: "false"
+          MODEL: ${{ vars.MODEL || 'gpt-4o-mini' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          GRAPH_USER: ${{ secrets.GRAPH_USER }}
+          ROSTER_FILE_PATH: ${{ vars.ROSTER_FILE_PATH }}
+          ROSTER_SITE_ID: ${{ vars.ROSTER_SITE_ID }}
+          SUBJECT_KEYWORDS: swap,switch,trade,cover,duty
