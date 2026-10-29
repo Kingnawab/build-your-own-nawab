@@ -1,0 +1,37 @@
+extract_swap_request:
+  description: >
+    Today is {today} ({weekday}). Resolve relative dates such as "next Tuesday" or
+    "this Friday" against today and output them as YYYY-MM-DD.
+
+    People on the duty roster: {people}
+    Duty types on the roster: {duties}
+
+    Email to analyse:
+    From: {sender_name} <{sender_email}>
+    Cc: {cc}
+    Received: {received_at}
+    Subject: {subject}
+    ---
+    {body}
+    ---
+
+    Rules:
+    - is_swap_request is true only if the email asks to swap, switch, trade, cover or
+      hand over a rostered duty. Newsletters, FYIs and unrelated mail are false.
+    - When the sender says "I", "me" or "my", that is {sender_name}. Map nicknames and
+      first names to the exact spelling from the roster list above.
+    - request_type "swap": person_a gives up their duty on date_a to person_b, and
+      person_b gives up their duty on date_b to person_a. If both duties are on the
+      same day, date_b equals date_a.
+    - request_type "cover": person_b takes over person_a's duty on date_a and nothing
+      is given back; date_b is null.
+    - One email may contain several changes; return one entry in requests per change.
+    - If a swap request is missing a person or a date, or a name matches nobody on
+      the roster, set needs_clarification true, leave requests empty and write a
+      short, polite clarification_question addressed to the sender.
+    - Ignore quoted earlier messages in the thread unless the latest message refers
+      to them (e.g. "yes, let's do the swap below").
+  expected_output: >
+    A ParsedEmail object describing whether this is a swap request and the exact
+    roster changes it asks for.
+  agent: swap_request_analyst
