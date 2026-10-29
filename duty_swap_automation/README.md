@@ -43,7 +43,16 @@ cp .env.example .env    # then fill it in
 Azure portal → **App registrations** → New registration.
 
 - **Option A, unattended (recommended for a daily job):** add *Application* permissions `Mail.ReadWrite`, `Mail.Send`, `Files.ReadWrite.All` (or `Sites.Selected` for a single SharePoint site) and have an admin **grant consent**. Create a client secret and set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `GRAPH_USER`. Ask IT to scope mailbox access to your mailbox with an [application access policy](https://learn.microsoft.com/graph/auth-limit-mailbox-access).
-- **Option B, just you, no admin consent:** under *Authentication* enable "Allow public client flows", add *Delegated* permissions `Mail.ReadWrite`, `Mail.Send`, `Files.ReadWrite.All`, `User.Read`, leave `AZURE_CLIENT_SECRET` blank, then run `authorize` once and sign in. The refresh token is cached in `.graph_token_cache.json` and reused by the daily run. Keep that file private.
+- **Option B, sign in once yourself:** runs on your own computer as you.
+  1. [App registrations](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) → *New registration*. Name it e.g. "Duty Swap Assistant", choose *Accounts in this organizational directory only*, leave Redirect URI empty, *Register*.
+  2. Copy the **Application (client) ID** into `AZURE_CLIENT_ID` (and optionally the Directory (tenant) ID into `AZURE_TENANT_ID`).
+  3. *Authentication* → *Advanced settings* → **Allow public client flows: Yes** → *Save*.
+  4. *API permissions* → *Add a permission* → *Microsoft Graph* → *Delegated* → add `Mail.ReadWrite`, `Mail.Send`, `Files.ReadWrite.All`, `User.Read`.
+  5. Leave `AZURE_CLIENT_SECRET` and `GRAPH_USER` blank and run `authorize`. It prints a code: open https://microsoft.com/devicelogin, enter it, sign in with your work account and accept the permissions. It then checks it can read your inbox and the roster file.
+
+  The refresh token is saved in `.graph_token_cache.json` and the daily run refreshes it silently. Each run keeps it alive; if the job stops running for a long time (typically 90 days) or your password/MFA policy revokes sessions, just run `authorize` again. Keep that file private: it grants access to your mail and files.
+
+  If you can't register apps, or sign-in says *Need admin approval*, your organisation blocks user consent, and you'll need IT to approve the app (they can grant consent on the same *API permissions* page).
 
 ### 2. Point it at the roster
 
