@@ -21,17 +21,18 @@ class GraphError(RuntimeError):
 
 class GraphClient:
     def __init__(self, settings: Settings):
-        if not settings.tenant_id or not settings.client_id:
-            raise GraphError("AZURE_TENANT_ID and AZURE_CLIENT_ID must be set for the graph backend.")
+        if not settings.client_id:
+            raise GraphError("AZURE_CLIENT_ID must be set for the graph backend.")
         self.settings = settings
         self.app_only = bool(settings.client_secret)
-        if self.app_only and not settings.graph_user:
-            raise GraphError("GRAPH_USER (mailbox UPN, e.g. you@company.com) is required with AZURE_CLIENT_SECRET.")
+        if self.app_only and not (settings.tenant_id and settings.graph_user):
+            raise GraphError("AZURE_TENANT_ID and GRAPH_USER (e.g. you@company.com) are required with AZURE_CLIENT_SECRET.")
         self._session = requests.Session()
         self._token: str | None = None
         self._token_expires = 0.0
         self._cache = msal.SerializableTokenCache()
-        authority = f"https://login.microsoftonline.com/{settings.tenant_id}"
+        # "organizations" lets any work/school account sign in without knowing the tenant id.
+        authority = f"https://login.microsoftonline.com/{settings.tenant_id or 'organizations'}"
         if self.app_only:
             self._app: msal.ClientApplication = msal.ConfidentialClientApplication(
                 settings.client_id, authority=authority, client_credential=settings.client_secret
@@ -124,4 +125,33 @@ def authorize_cli() -> None:
     client._acquire_token(interactive=True)
     me = client.request("GET", "/me", params={"$select": "displayName,mail,userPrincipalName"})
     print(f"Signed in as {me.get('displayName')} <{me.get('mail') or me.get('userPrincipalName')}>")
-    print(f"Token cache saved to {settings.token_cache_path}")
+    print(f"Token cache saved to {os.path.abspath(settings.token_cache_path)}")
+
+    from duty_swap_automation.mailbox import GraphMailbox
+    from duty_swap_automation.roster import GraphWorkbook, load_roster
+
+    ok = True
+    try:
+        emails = GraphMailbox(client, settings).fetch_candidates()
+        print(f"[ok] Inbox readable: {len(emails)} matching unread email(s) in the last {settings.lookback_hours}h")
+    except Exception as exc:
+        ok = False
+        print(f"[fail] Could not read inbox: {exc}")
+    workbook = None
+    try:
+        workbook = GraphWorkbook(client, settings)
+        roster = load_roster(workbook, settings)
+        print(f"[ok] Roster '{settings.roster_sheet}' readable: {len(roster.rows)} duty rows, "
+              f"{len(roster.people)} people, {len(roster.staff_emails)} staff emails")
+    except Exception as exc:
+        ok = False
+        print(f"[fail] Could not read roster workbook: {exc}")
+    finally:
+        if workbook is not None:
+            try:
+                workbook.close()
+            except Exception:
+                pass
+    if not ok:
+        raise SystemExit("Fix the items above (usually ROSTER_* settings in .env), then run `authorize` again.")
+    print("Setup looks good. Try `DRY_RUN=true kickoff` next.")
