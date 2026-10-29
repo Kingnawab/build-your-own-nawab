@@ -152,4 +152,6 @@ def authorize_cli() -> None:
                 workbook.close()
             except Exception:
                 pass
-    print("Setup looks good. Try `DRY_RUN=true kickoff` next." if ok else "Fix the items above, then run `authorize` again.")
+    if not ok:
+        raise SystemExit("Fix the items above (usually ROSTER_* settings in .env), then run `authorize` again.")
+    print("Setup looks good. Try `DRY_RUN=true kickoff` next.")

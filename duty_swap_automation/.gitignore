@@ -5,3 +5,5 @@ __pycache__/
 .graph_token_cache.json
 sample_data/
 .pytest_cache/
+run.log
+run_duty_swap.cmd

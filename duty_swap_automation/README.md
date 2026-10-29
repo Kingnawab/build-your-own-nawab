@@ -30,7 +30,16 @@ Optional sheet `Staff` with `Name` and `Email` columns. It's used to recognize w
 
 If your roster is a grid instead (names down the side, dates across the top), the only code that needs changing is `load_roster` / `plan_changes` in `roster.py`.
 
-## Setup
+## Quick setup (sign in once yourself, on your own computer)
+
+```bash
+cd duty_swap_automation
+python3 setup_wizard.py        # Windows: py setup_wizard.py
+```
+
+The wizard installs everything, registers the Microsoft app for you if the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) is installed (otherwise it shows the browser steps), asks for your OpenAI key and roster location, walks you through the Microsoft sign-in, does a test run that changes nothing, and schedules the weekday-morning run (Task Scheduler on Windows, launchd on macOS, cron on Linux). Re-running it is safe.
+
+## Manual setup
 
 ```bash
 cd duty_swap_automation
